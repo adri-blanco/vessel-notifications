@@ -19,6 +19,7 @@ from ais_notify.db.repository import Repository
 from ais_notify.db.supabase_client import get_supabase
 from ais_notify.decode import AISDecoder
 from ais_notify.dedup import DedupCache
+from ais_notify.geofence import Geofence
 from ais_notify.handler import SignalHandler
 from ais_notify.notify.telegram import TelegramNotifier
 from ais_notify.sources.base import AISSource
@@ -60,9 +61,10 @@ async def _main() -> None:
     repo = Repository(supabase)
     notifier = TelegramNotifier(config.telegram_bot_token, config.telegram_chat_id)
     dedup = DedupCache(config.dedup_window_seconds)
+    geofence = Geofence.from_env()
     source = _build_source(config)
     decoder = AISDecoder(source)
-    handler = SignalHandler(repo=repo, notifier=notifier, dedup=dedup)
+    handler = SignalHandler(repo=repo, notifier=notifier, dedup=dedup, geofence=geofence)
 
     # Scheduler for daily/weekly reports
     scheduler = create_scheduler(config, repo, notifier)
