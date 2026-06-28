@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIS Notify — Logo Concepts</title>
+  <style>
+    :root {
+      --bg:       #06101c;
+      --bg2:      #0b1a2c;
+      --border:   rgba(0, 190, 230, 0.12);
+      --accent:   #00c8f0;
+      --text:     #b8d4e8;
+      --muted:    #4e6e88;
+      --name:     #ddeef8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      min-height: 100vh;
+      padding: 72px 40px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 72px;
+    }
+
+    .tag {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.7;
+      margin-bottom: 18px;
+    }
+
+    header h1 {
+      font-size: 32px;
+      font-weight: 200;
+      letter-spacing: 0.1em;
+      color: var(--name);
+      margin-bottom: 14px;
+    }
+
+    header p {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.8;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 44px 24px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% -10%, rgba(0,200,240,0.06) 0%, transparent 65%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(0, 190, 230, 0.35);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,200,240,0.08);
+    }
+
+    .card:hover::after { opacity: 1; }
+
+    .card:hover .logo-wrap svg { color: var(--accent); }
+
+    .logo-wrap {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 30px;
+    }
+
+    .logo-wrap svg {
+      width: 100%;
+      height: 100%;
+      color: #5a9abb;
+      transition: color 0.3s ease;
+    }
+
+    .num {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      opacity: 0.45;
+      margin-bottom: 8px;
+    }
+
+    .name {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--name);
+      margin-bottom: 14px;
+    }
+
+    .rule {
+      width: 28px;
+      height: 1px;
+      background: var(--border);
+      margin: 0 auto 14px;
+    }
+
+    .desc {
+      font-size: 10.5px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 72px;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    @media (max-width: 680px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      body { padding: 48px 20px 60px; }
+    }
+    @media (max-width: 420px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="tag">Logo Concepts &nbsp;·&nbsp; v1 &nbsp;·&nbsp; 2026</div>
+  <h1>AIS Notify</h1>
+  <p>Six design directions for a maritime AIS vessel notification system running on Raspberry Pi. Each explores a different visual metaphor from the product's core ideas.</p>
+</header>
+
+<div class="grid">
+
+  <!-- 01 Radar Sweep -->
+  <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="c1">
+            <rect x="10" y="8" width="82" height="82"/>
+          </clipPath>
+        </defs>
+        <g clip-path="url(#c1)">
+          <circle cx="10" cy="90" r="30" stroke="currentColor" stroke-width="1.5" opacity="0.28"/>
+          <circle cx="10" cy="90" r="52" stroke="currentColor" stroke-width="1.5" opacity="0.42"/>
+          <circle cx="10" cy="90" r="74" stroke="currentColor" stroke-width="1.5" opacity="0.55"/>
+        </g>
+        <!-- Sweep line -->
+        <line x1="10" y1="90" x2="72" y2="18" stroke="currentColor" stroke-width="1" opacity="0.22"/>
+        <!-- Station dot -->
+        <circle cx="10" cy="90" r="3" fill="currentColor" opacity="0.55"/>
+        <!-- Vessel echoes -->
+        <circle cx="62" cy="34" r="4" fill="currentColor"/>
+        <circle cx="40" cy="58" r="3" fill="currentColor" opacity="0.7"/>
+        <circle cx="74" cy="56" r="2.5" fill="currentColor" opacity="0.45"/>
+        <!-- Pulse ring on nearest -->
+        <circle cx="62" cy="34" r="8" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+      </svg>
+    </div>
+    <div class="num">01</div>
+    <div class="name">Radar Sweep</div>
+    <div class="rule"></div>
+    <div class="desc">AIS range arcs fan from a fixed station. Vessel echoes appear at distance — the exact moment of reception made visible.</div>
+  </div>
+
+  <!-- 02 Ship Signal -->
+  <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Hull -->
+        <path d="M 16 64 L 21 53 L 55 53 L 60 64 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <!-- Cabin -->
+        <rect x="26" y="43" width="19" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <!-- Mast -->
+        <line x1="35.5" y1="43" x2="35.5" y2="34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Signal arcs -->
+        <path d="M 63 53 Q 69 58.5 63 64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.45"/>
+        <path d="M 69 48 Q 79 58.5 69 69" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        <path d="M 75 43 Q 89 58.5 75 74" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.78"/>
+        <!-- Waterline -->
+        <path d="M 12 68 Q 21 70 30 68 Q 39 66 48 68 Q 57 70 63 68" stroke="currentColor" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="num">02</div>
+    <div class="name">Ship Signal</div>
+    <div class="rule"></div>
+    <div class="desc">Vessel profile with AIS arcs broadcasting to the right. The most literal read of the product — a ship transmitting its identity.</div>
+  </div>
+
+  <!-- 03 Anchor Tech -->
+  <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Signal arc replacing traditional ring -->
+        <path d="M 33 30 Q 50 15 67 30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- Crown dot -->
+        <circle cx="50" cy="30" r="3.5" fill="currentColor"/>
+        <!-- Shaft -->
+        <line x1="50" y1="30" x2="50" y2="74" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- Stock (crossbar) -->
+        <line x1="31" y1="44" x2="69" y2="44" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- Flukes -->
+        <path d="M 50 74 Q 30 74 30 58" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M 50 74 Q 70 74 70 58" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- Stock end dots -->
+        <circle cx="31" cy="44" r="2.5" fill="currentColor" opacity="0.55"/>
+        <circle cx="69" cy="44" r="2.5" fill="currentColor" opacity="0.55"/>
+      </svg>
+    </div>
+    <div class="num">03</div>
+    <div class="name">Anchor Tech</div>
+    <div class="rule"></div>
+    <div class="desc">The anchor's ring replaced by an AIS signal arc. Maritime heritage and radio technology merged into a single symbol.</div>
+  </div>
+
+  <!-- 04 Track Grid -->
+  <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background grid -->
+        <g fill="currentColor" opacity="0.18">
+          <circle cx="20" cy="20" r="1.5"/><circle cx="38" cy="20" r="1.5"/><circle cx="56" cy="20" r="1.5"/><circle cx="74" cy="20" r="1.5"/>
+          <circle cx="20" cy="38" r="1.5"/><circle cx="38" cy="38" r="1.5"/><circle cx="56" cy="38" r="1.5"/><circle cx="74" cy="38" r="1.5"/>
+          <circle cx="20" cy="56" r="1.5"/><circle cx="38" cy="56" r="1.5"/><circle cx="56" cy="56" r="1.5"/><circle cx="74" cy="56" r="1.5"/>
+          <circle cx="20" cy="74" r="1.5"/><circle cx="38" cy="74" r="1.5"/><circle cx="56" cy="74" r="1.5"/><circle cx="74" cy="74" r="1.5"/>
+        </g>
+        <!-- Track path -->
+        <polyline points="20,74 38,56 56,38 74,20" stroke="currentColor" stroke-width="1.5" opacity="0.35" stroke-dasharray="4 3"/>
+        <!-- Vessel positions (oldest → newest, fading in) -->
+        <circle cx="20" cy="74" r="3.5" fill="currentColor" opacity="0.3"/>
+        <circle cx="38" cy="56" r="3.5" fill="currentColor" opacity="0.52"/>
+        <circle cx="56" cy="38" r="3.5" fill="currentColor" opacity="0.74"/>
+        <!-- Latest position -->
+        <circle cx="74" cy="20" r="5" fill="currentColor"/>
+        <circle cx="74" cy="20" r="10" stroke="currentColor" stroke-width="1" opacity="0.28"/>
+        <circle cx="74" cy="20" r="15" stroke="currentColor" stroke-width="0.75" opacity="0.14"/>
+      </svg>
+    </div>
+    <div class="num">04</div>
+    <div class="name">Track Grid</div>
+    <div class="rule"></div>
+    <div class="desc">Vessel positions fade in across a coordinate grid, growing brighter toward the latest sighting. Pure data, pure sea.</div>
+  </div>
+
+  <!-- 05 Signal Bell -->
+  <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Signal arcs above -->
+        <path d="M 39 24 Q 50 15 61 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+        <path d="M 34 18 Q 50 7  66 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
+        <!-- Hanger -->
+        <line x1="50" y1="30" x2="50" y2="36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Bell dome -->
+        <path d="M 34 65 Q 33 40 50 37 Q 67 40 66 65 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <!-- Brim -->
+        <path d="M 30 65 L 70 65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <!-- Clapper stem + ball -->
+        <line x1="50" y1="65" x2="50" y2="71" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="50" cy="74" r="3" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="num">05</div>
+    <div class="name">Signal Bell</div>
+    <div class="rule"></div>
+    <div class="desc">Notification bell with AIS arcs rising above it. The whole product promise in one icon — a vessel is heard, you are told.</div>
+  </div>
+
+  <!-- 06 Crosshair Lock -->
+  <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer ring -->
+        <circle cx="50" cy="50" r="38" stroke="currentColor" stroke-width="1.5" opacity="0.35"/>
+        <!-- Inner ring -->
+        <circle cx="50" cy="50" r="20" stroke="currentColor" stroke-width="1.5" opacity="0.65"/>
+        <!-- Crosshair lines (gapped at center) -->
+        <line x1="50" y1="12" x2="50" y2="28" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="50" y1="72" x2="50" y2="88" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="50" x2="28" y2="50" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="72" y1="50" x2="88" y2="50" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Ship silhouette at center (pointing up = heading north) -->
+        <polygon points="50,38 57,58 50,54 43,58" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="num">06</div>
+    <div class="name">Crosshair Lock</div>
+    <div class="rule"></div>
+    <div class="desc">A targeting reticle locked onto a vessel silhouette. Precision surveillance — every AIS transmission located and recorded.</div>
+  </div>
+
+</div>
+
+<footer>AIS Notify &nbsp;·&nbsp; Logo Concepts &nbsp;·&nbsp; 2026</footer>
+
+</body>
+</html>
