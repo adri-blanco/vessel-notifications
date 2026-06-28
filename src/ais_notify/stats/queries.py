@@ -13,6 +13,25 @@ from typing import Any
 import pytz
 
 
+def build_all_stats(summary: dict, first_date: datetime | None) -> dict:
+    """Build an all-time stats dict from a stats_summary RPC result."""
+    type_breakdown = {
+        entry.get("ship_type_label") or "Unknown": int(entry["count"])
+        for entry in (summary.get("type_breakdown") or [])
+    }
+    top_vessels = [
+        (entry.get("name") or f"MMSI {entry['mmsi']}", int(entry["count"]))
+        for entry in (summary.get("top_vessels") or [])
+    ]
+    return {
+        "total_sightings": int(summary.get("total_sightings") or 0),
+        "unique_vessels": int(summary.get("unique_vessels") or 0),
+        "first_date": first_date,
+        "type_breakdown": type_breakdown,
+        "top_vessels": top_vessels,
+    }
+
+
 def _localise(iso_date: str, tz: Any) -> datetime:
     """Parse an ISO date string and attach a timezone for display purposes."""
     from datetime import date

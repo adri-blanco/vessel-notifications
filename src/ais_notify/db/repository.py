@@ -221,6 +221,28 @@ class Repository:
             logger.error("daily_sighting_counts failed: %s", exc)
             return []
 
+    def _get_first_sighting_date_sync(self) -> datetime | None:
+        """Return the UTC timestamp of the earliest vessel first_seen ever recorded."""
+        res = (
+            self._db.table("vessels")
+            .select("first_seen")
+            .order("first_seen", desc=False)
+            .limit(1)
+            .execute()
+        )
+        if not res.data or not res.data[0].get("first_seen"):
+            return None
+        ts_str = res.data[0]["first_seen"]
+        return datetime.fromisoformat(ts_str.replace("Z", "+00:00")).astimezone(timezone.utc)
+
+    async def get_first_sighting_date(self) -> datetime | None:
+        """Return the UTC datetime of the very first vessel ever recorded, or None."""
+        try:
+            return await asyncio.to_thread(self._get_first_sighting_date_sync)
+        except Exception as exc:
+            logger.error("get_first_sighting_date failed: %s", exc)
+            return None
+
     def _first_seen_in_range_sync(self, since: datetime, until: datetime) -> list[int]:
         """Return MMSIs whose very first sighting falls in the given window."""
         res = (

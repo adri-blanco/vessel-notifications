@@ -152,6 +152,35 @@ def format_daily_stats(stats: dict) -> str:
     return "\n".join(lines)
 
 
+def format_all_stats(stats: dict) -> str:
+    """Build a Telegram HTML message for all-time statistics."""
+    lines = [
+        "🗂️ <b>All-time statistics</b>",
+        "",
+        f"📡 Total sightings: <b>{stats.get('total_sightings', 0)}</b>",
+        f"🚢 Unique vessels: <b>{stats.get('unique_vessels', 0)}</b>",
+    ]
+    first_date = stats.get("first_date")
+    if first_date:
+        lines.append(f"📅 Tracking since: <b>{first_date.strftime('%d %b %Y')}</b>")
+
+    type_breakdown = stats.get("type_breakdown", {})
+    if type_breakdown:
+        lines.append("")
+        lines.append("📦 <b>By ship type:</b>")
+        for label, count in sorted(type_breakdown.items(), key=lambda x: -x[1])[:8]:
+            lines.append(f"  • {_e(label)}: {count}")
+
+    top_vessels = stats.get("top_vessels", [])
+    if top_vessels:
+        lines.append("")
+        lines.append("🏆 <b>Most seen vessels:</b>")
+        for i, (name, count) in enumerate(top_vessels[:5], 1):
+            lines.append(f"  {i}. {_e(name)}: {count} sightings")
+
+    return "\n".join(lines)
+
+
 def format_weekly_stats(stats: dict) -> str:
     """Build a Telegram HTML message for weekly statistics."""
     week_label = _e(stats.get("week", "this week"))

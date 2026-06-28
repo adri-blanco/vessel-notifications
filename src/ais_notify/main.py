@@ -14,6 +14,8 @@ import logging
 import signal as posix_signal
 import sys
 
+import pytz
+
 from ais_notify.config import load_config
 from ais_notify.db.repository import Repository
 from ais_notify.db.supabase_client import get_supabase
@@ -21,6 +23,7 @@ from ais_notify.decode import AISDecoder
 from ais_notify.dedup import DedupCache
 from ais_notify.geofence import Geofence
 from ais_notify.handler import SignalHandler
+from ais_notify.notify.bot_commands import build_command_app
 from ais_notify.notify.telegram import TelegramNotifier
 from ais_notify.sources.base import AISSource
 from ais_notify.stats.scheduler import create_scheduler
@@ -57,6 +60,7 @@ async def _main() -> None:
     logger.info("Starting AIS Notify (source=%s)", config.ais_source)
 
     # Build components
+    tz = pytz.timezone(config.timezone)
     supabase = get_supabase(config)
     repo = Repository(supabase)
     notifier = TelegramNotifier(config.telegram_bot_token, config.telegram_chat_id)
@@ -70,6 +74,13 @@ async def _main() -> None:
     scheduler = create_scheduler(config, repo, notifier)
     scheduler.start()
     logger.info("Scheduler started (tz=%s)", config.timezone)
+
+    # Telegram bot command polling (/today, /week, /all)
+    cmd_app = build_command_app(config.telegram_bot_token, config.telegram_chat_id, repo, tz)
+    await cmd_app.initialize()
+    await cmd_app.start()
+    await cmd_app.updater.start_polling(drop_pending_updates=True)
+    logger.info("Bot command polling started")
 
     # Periodic dedup cache eviction (every 10 minutes)
     async def _evict_loop() -> None:
@@ -117,6 +128,9 @@ async def _main() -> None:
         except asyncio.CancelledError:
             pass
         scheduler.shutdown(wait=False)
+        await cmd_app.updater.stop()
+        await cmd_app.stop()
+        await cmd_app.shutdown()
         await source.close()
         logger.info("AIS Notify stopped cleanly")
 
