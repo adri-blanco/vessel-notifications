@@ -35,6 +35,12 @@ _STATIC_TYPES = {5, 24}
 # All types we care to process
 _HANDLED_TYPES = _POSITION_TYPES | _STATIC_TYPES
 
+# Non-vessel MMSI prefixes (first two digits of a 9-digit MMSI):
+#   99 = Aids to Navigation (lighthouses, buoys, beacons, virtual AtoN)
+#   98 = Craft associated with a parent ship
+#   97 = SAR transponders, Man-overboard devices, EPIRBs
+_NON_VESSEL_MMSI_PREFIXES = {97, 98, 99}
+
 # Incomplete multi-part messages older than this are dropped
 _FRAGMENT_TTL_SECONDS = 30
 # Check and evict stale fragments every N messages
@@ -156,6 +162,12 @@ class AISDecoder:
 
         mmsi = _safe_int(getattr(msg, "mmsi", None))
         if not mmsi:
+            return None
+
+        # Drop non-vessel stations: AtoN (type 21 or MMSI prefix 99),
+        # craft associated with parent ships (98), and SAR/MOB/EPIRB (97).
+        if msg_type == 21 or mmsi // 10_000_000 in _NON_VESSEL_MMSI_PREFIXES:
+            logger.debug("Skipping non-vessel MMSI %d (msg_type=%d)", mmsi, msg_type)
             return None
 
         ts = datetime.now(timezone.utc)
