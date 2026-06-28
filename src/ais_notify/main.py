@@ -76,11 +76,19 @@ async def _main() -> None:
     logger.info("Scheduler started (tz=%s)", config.timezone)
 
     # Telegram bot command polling (/today, /week, /all)
-    cmd_app = build_command_app(config.telegram_bot_token, config.telegram_chat_id, repo, tz)
-    await cmd_app.initialize()
-    await cmd_app.start()
-    await cmd_app.updater.start_polling(drop_pending_updates=True)
-    logger.info("Bot command polling started")
+    # Wrapped in try/except so a Telegram API hiccup at startup doesn't
+    # crash the core AIS pipeline.  If this fails, commands are unavailable
+    # for this run but sighting notifications keep working normally.
+    cmd_app = None
+    try:
+        cmd_app = build_command_app(config.telegram_bot_token, config.telegram_chat_id, repo, tz)
+        await cmd_app.initialize()
+        await cmd_app.start()
+        await cmd_app.updater.start_polling(drop_pending_updates=True)
+        logger.info("Bot command polling started (/today /week /all)")
+    except Exception as exc:
+        logger.warning("Bot command polling failed to start — commands unavailable: %s", exc)
+        cmd_app = None
 
     # Periodic dedup cache eviction (every 10 minutes)
     async def _evict_loop() -> None:
@@ -128,9 +136,13 @@ async def _main() -> None:
         except asyncio.CancelledError:
             pass
         scheduler.shutdown(wait=False)
-        await cmd_app.updater.stop()
-        await cmd_app.stop()
-        await cmd_app.shutdown()
+        if cmd_app is not None:
+            try:
+                await cmd_app.updater.stop()
+                await cmd_app.stop()
+                await cmd_app.shutdown()
+            except Exception as exc:
+                logger.warning("Error stopping bot command app: %s", exc)
         await source.close()
         logger.info("AIS Notify stopped cleanly")
 
