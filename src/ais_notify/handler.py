@@ -6,8 +6,9 @@ For each VesselSignal that passes all filters:
   2. Dedup check (returns last_seen timestamp so no second DB call is needed).
   3. Load or initialise a Vessel record.
   4. Apply enrichment chain.
-  5. Send Telegram notification (fast path — before the DB writes).
-  6. Persist sighting + upsert vessel asynchronously.
+  5. Classify direction (Arriving / Departing) from COG + SOG.
+  6. Send Telegram notification (fast path — before the DB writes).
+  7. Persist sighting + upsert vessel asynchronously.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import logging
 
 from ais_notify.db.repository import Repository
 from ais_notify.dedup import DedupCache
+from ais_notify.direction import classify_direction
 from ais_notify.enrich.ais_static import AISStaticEnricher
 from ais_notify.enrich.photo import PhotoEnricher, run_enrichment_chain
 from ais_notify.geofence import Geofence
@@ -69,19 +71,22 @@ class SignalHandler:
         # ── 4. Enrich ────────────────────────────────────────────────────
         vessel = await run_enrichment_chain(vessel, signal, _ENRICH_PROVIDERS)
 
-        # ── 5. Send Telegram (fast path, before DB writes) ───────────────
+        # ── 5. Classify direction from COG ───────────────────────────────
+        direction = classify_direction(signal.cog, signal.sog)
+
+        # ── 6. Send Telegram (fast path, before DB writes) ───────────────
         try:
-            message = format_sighting(vessel, signal, last_seen, is_first_ever)
+            message = format_sighting(vessel, signal, last_seen, is_first_ever, direction)
             asyncio.create_task(
                 self._notifier.send_message(message, photo_url=vessel.photo_url)
             )
         except Exception as exc:
             logger.error("Failed to format/send Telegram for MMSI %d: %s", signal.mmsi, exc)
 
-        # ── 6. Mark dedup cache immediately ──────────────────────────────
+        # ── 7. Mark dedup cache immediately ──────────────────────────────
         self._dedup.mark_seen(signal.mmsi, signal.ts)
 
-        # ── 7. Persist (fire-and-forget) ─────────────────────────────────
+        # ── 8. Persist (fire-and-forget) ─────────────────────────────────
         sighting = Sighting(
             mmsi=signal.mmsi,
             ts=signal.ts,
@@ -91,6 +96,7 @@ class SignalHandler:
             cog=signal.cog,
             heading=signal.heading,
             nav_status=signal.nav_status,
+            direction=direction,
             source=signal.source,
             raw=signal.raw,
         )

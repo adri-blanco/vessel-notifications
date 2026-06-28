@@ -76,5 +76,6 @@ class Sighting:
     cog: float | None = None
     heading: int | None = None
     nav_status: int | None = None
+    direction: str | None = None  # "Arriving" | "Departing" | None
     source: str = "unknown"
     raw: str | None = None

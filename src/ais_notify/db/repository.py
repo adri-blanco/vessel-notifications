@@ -141,6 +141,8 @@ class Repository:
             row["heading"] = int(sighting.heading)
         if sighting.nav_status is not None:
             row["nav_status"] = int(sighting.nav_status)
+        if sighting.direction is not None:
+            row["direction"] = sighting.direction
         if sighting.raw is not None:
             row["raw"] = sighting.raw
 

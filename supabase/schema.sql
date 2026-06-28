@@ -55,9 +55,15 @@ CREATE TABLE IF NOT EXISTS sightings (
     cog         NUMERIC(6, 2),   -- degrees
     heading     SMALLINT,
     nav_status  SMALLINT,
+    direction   TEXT CHECK (direction IN ('Arriving', 'Departing')),
     source      TEXT NOT NULL DEFAULT 'unknown',
     raw         TEXT
 );
+
+-- Migration: add direction column to an existing sightings table
+-- Run this once if the table already exists:
+-- ALTER TABLE sightings
+--     ADD COLUMN IF NOT EXISTS direction TEXT CHECK (direction IN ('Arriving', 'Departing'));
 
 -- Fast lookup of latest sighting per vessel (used by dedup + notifications)
 CREATE INDEX IF NOT EXISTS idx_sightings_mmsi_ts  ON sightings (mmsi, ts DESC);

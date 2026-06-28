@@ -50,11 +50,18 @@ def _human_duration(dt: datetime) -> str:
     return f"{days}d ago"
 
 
+_DIRECTION_EMOJI = {
+    "Arriving": "🔴",
+    "Departing": "🟢",
+}
+
+
 def format_sighting(
     vessel: Vessel,
     signal: VesselSignal,
     last_seen: datetime | None,
     is_first_ever: bool,
+    direction: str | None = None,
 ) -> str:
     """Build a Telegram HTML notification for a new sighting."""
     name = _e(vessel.name) if vessel.name else f"MMSI {vessel.mmsi}"
@@ -64,6 +71,8 @@ def format_sighting(
     lines: list[str] = []
 
     header = f"{emoji} <b>{name}</b> {flag}"
+    if direction:
+        header += f"  {_DIRECTION_EMOJI.get(direction, '')} <b>{direction}</b>"
     if is_first_ever:
         header += "  <i>(first time seen!)</i>"
     lines.append(header)
