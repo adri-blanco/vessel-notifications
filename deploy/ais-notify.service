@@ -1,0 +1,25 @@
+[Unit]
+Description=AIS Vessel Notification System
+After=network-online.target rtl-ais.service
+Wants=network-online.target
+# Start after rtl-ais so the UDP port is already open
+Requires=rtl-ais.service
+Documentation=https://github.com/yourusername/vessel-notifications
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/vessel-notifications
+# Activate the virtualenv and run the app
+ExecStart=/home/pi/vessel-notifications/.venv/bin/ais-notify
+Restart=on-failure
+RestartSec=15
+# Environment variables can also be set here or loaded from a file
+EnvironmentFile=/home/pi/vessel-notifications/.env
+# Log to journald (use: journalctl -u ais-notify -f)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ais-notify
+
+[Install]
+WantedBy=multi-user.target

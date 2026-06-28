@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ais-notify"
+version = "0.1.0"
+description = "AIS vessel notification system for Raspberry Pi"
+requires-python = ">=3.11"
+dependencies = [
+    "pyais>=3.0,<4",
+    "python-telegram-bot[ext]>=21.0,<23",
+    "supabase>=2.5,<3",
+    "apscheduler>=3.10,<4",
+    "python-dotenv>=1.0",
+    "pyserial>=3.5",
+    "aiohttp>=3.9",
+    "pytz>=2024.1",
+]
+
+[project.scripts]
+ais-notify = "ais_notify.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

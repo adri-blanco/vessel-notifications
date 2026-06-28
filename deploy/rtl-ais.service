@@ -1,0 +1,17 @@
+[Unit]
+Description=rtl-ais AIS SDR receiver
+After=network.target
+Documentation=https://github.com/dgiardini/rtl-ais
+
+[Service]
+Type=simple
+User=pi
+# Decode AIS on both channels and forward NMEA to UDP 127.0.0.1:10110
+ExecStart=/usr/local/bin/rtl_ais -n -h 127.0.0.1 -P 10110
+Restart=on-failure
+RestartSec=10
+# USB device access
+SupplementaryGroups=plugdev
+
+[Install]
+WantedBy=multi-user.target

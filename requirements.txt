@@ -1,0 +1,8 @@
+pyais>=3.0,<4
+python-telegram-bot[ext]>=21.0,<23
+supabase>=2.5,<3
+apscheduler>=3.10,<4
+python-dotenv>=1.0
+pyserial>=3.5
+aiohttp>=3.9
+pytz>=2024.1
