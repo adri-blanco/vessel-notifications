@@ -41,6 +41,13 @@ def test_format_sighting_first_ever():
     assert "first time seen" in msg
     assert "Spain" in msg
     assert "41.38" in msg
+    assert "vesselFinder.com/?mmsi=224123456" in msg
+
+
+def test_format_sighting_vesselfinder_link_always_present():
+    signal_no_pos = VesselSignal(mmsi=224123456, ts=datetime.now(timezone.utc), source="test")
+    msg = format_sighting(_vessel(), signal_no_pos, last_seen=None, is_first_ever=False)
+    assert "vesselFinder.com/?mmsi=224123456" in msg
 
 
 def test_format_sighting_with_last_seen():

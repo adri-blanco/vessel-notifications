@@ -1,18 +1,21 @@
 # Sample AIS NMEA sentences for offline testing with FileSource.
 # Lines starting with '#' are ignored by FileSource.
 
-# Class A position report (type 1) — MMSI 123456789
-!AIVDM,1,1,,A,13HOI:0P0000VOHLCnHQKwvL05Ip,0*23
+# Class A position report (type 1) — MMSI 219035717 (Denmark), Skagerrak, 8.2 kn
+!AIVDM,1,1,,A,13@ppA@P1B0fdB0Pn3@7CUkp0000,0*71
 
-# Class A position report (type 1) — MMSI 338234631 (USA)
-!AIVDM,1,1,,B,15RTgt0PAso;90TKcjM8h6g208CQ,0*4A
+# Class A position report (type 1) — MMSI 235032961 (UK), North Sea, 12.5 kn
+!AIVDM,1,1,,A,13P9AP@P1u09W?0Md``1hQMp0000,0*45
 
-# Class B position report (type 18) — MMSI 338220166
-!AIVDM,1,1,,B,B3P=0E000H67Io06B08h4eH50000,0*6E
+# Class B position report (type 18) — MMSI 244040846 (Netherlands), near Rotterdam
+!AIVDM,1,1,,B,B3`g4SP07h52A07K::0qSwv4P000,0*46
 
-# Class A static & voyage data (type 5) — two-part message
-!AIVDM,2,1,3,B,55?P5oP00000h;:E8804l4pN0Dp4l6222220l1@A845500Ht0000000000,0*4B
-!AIVDM,2,2,3,B,00000000000,2*22
+# Class A static & voyage data (type 5) — MMSI 225994857 (France), two-part message
+!AIVDM,2,1,3,B,53GQ`J@2?=f@Hld`0005@h4q@T>0<t5=@000001600000000003PCU1Dh000,0*44
+!AIVDM,2,2,3,B,00000000000,2*24
 
-# Another Class A position — MMSI 211234560 (Germany)
-!AIVDM,1,1,,A,133uFV0P00PD>hRMDH@jgwvN20S8,0*37
+# Class A position report (type 1) — MMSI 538005788 (Marshall Islands), Bay of Biscay, 14 kn
+!AIVDM,1,1,,A,1815A70P2<O`<T0Kh7p::85p0000,0*5D
+
+# Class A position report (type 1) — MMSI 275467000 (Netherlands), Amsterdam, moored
+!AIVDM,1,1,,A,146e:v5P000Ev@0MvtP00?wp0000,0*0D

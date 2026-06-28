@@ -100,6 +100,8 @@ def format_sighting(
         lines.append(f"📍 <b>Position:</b> {signal.lat:.5f}, {signal.lon:.5f}")
         maps_url = f"https://www.google.com/maps?q={signal.lat},{signal.lon}"
         lines.append(f"🗾 <a href='{maps_url}'>Open on map</a>")
+    vf_url = f"https://www.vesselFinder.com/?mmsi={vessel.mmsi}"
+    lines.append(f"🔍 <a href='{vf_url}'>View on VesselFinder</a>")
     if signal.sog is not None:
         lines.append(f"⚡ <b>Speed:</b> {signal.sog:.1f} kn")
     if signal.cog is not None:
