@@ -47,12 +47,12 @@ class SignalHandler:
     async def handle(self, signal: VesselSignal) -> None:
         # ── 1. Geofence check (pure Python, no I/O) ──────────────────────
         if not self._geofence.allows(signal.lat, signal.lon):
-            logger.debug(
-                "MMSI %d skipped — position (%s, %s) outside geofence",
-                signal.mmsi,
-                signal.lat,
-                signal.lon,
+            reason = (
+                "no position available"
+                if signal.lat is None or signal.lon is None
+                else f"position ({signal.lat}, {signal.lon}) outside geofence"
             )
+            logger.debug("Signal rejected — MMSI %d: %s", signal.mmsi, reason)
             return
 
         # ── 2. Dedup check ───────────────────────────────────────────────
@@ -60,6 +60,11 @@ class SignalHandler:
         # last_seen_ts is reused in the notification — no second query needed.
         is_dup, last_seen = await self._dedup.check(signal.mmsi, self._repo)
         if is_dup:
+            logger.debug(
+                "Signal rejected — MMSI %d: duplicate within dedup window (last seen %s)",
+                signal.mmsi,
+                last_seen,
+            )
             return
 
         # ── 3. Load existing vessel or create a stub ─────────────────────

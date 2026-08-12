@@ -106,16 +106,30 @@ class AISDecoder:
     async def _process_line(self, raw_line: bytes) -> VesselSignal | None:
         sentence = raw_line.decode("ascii", errors="replace").strip()
         if not sentence.startswith("!AIVDM") and not sentence.startswith("!AIVDO"):
+            logger.debug(
+                "Signal rejected — not an AIVDM/AIVDO sentence: %r", sentence
+            )
             return None
 
         parts = sentence.split(",")
         if len(parts) < 7:
+            logger.debug(
+                "Signal rejected — malformed sentence, expected at least 7 "
+                "comma-separated fields, got %d: %r",
+                len(parts),
+                sentence,
+            )
             return None
 
         try:
             total_parts = int(parts[1])
             part_num = int(parts[2])
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exc:
+            logger.debug(
+                "Signal rejected — could not parse fragment count/number: %s (%r)",
+                exc,
+                sentence,
+            )
             return None
 
         seq_id = parts[3]  # sequential message identifier (empty for single-part)
@@ -153,21 +167,29 @@ class AISDecoder:
         try:
             msg = pyais_decode(*raw_parts)
         except Exception as exc:
-            logger.debug("pyais decode error: %s", exc)
+            logger.debug("Signal rejected — pyais decode error: %s", exc)
             return None
 
         msg_type = msg.msg_type
         if msg_type not in _HANDLED_TYPES:
+            logger.debug(
+                "Signal rejected — unsupported message type %d", msg_type
+            )
             return None
 
         mmsi = _safe_int(getattr(msg, "mmsi", None))
         if not mmsi:
+            logger.debug(
+                "Signal rejected — missing or invalid MMSI (msg_type=%d)", msg_type
+            )
             return None
 
         # Drop non-vessel stations: AtoN (type 21 or MMSI prefix 99),
         # craft associated with parent ships (98), and SAR/MOB/EPIRB (97).
         if msg_type == 21 or mmsi // 10_000_000 in _NON_VESSEL_MMSI_PREFIXES:
-            logger.debug("Skipping non-vessel MMSI %d (msg_type=%d)", mmsi, msg_type)
+            logger.debug(
+                "Signal rejected — non-vessel MMSI %d (msg_type=%d)", mmsi, msg_type
+            )
             return None
 
         ts = datetime.now(timezone.utc)
