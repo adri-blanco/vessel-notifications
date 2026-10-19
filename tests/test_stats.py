@@ -87,3 +87,10 @@ def test_build_weekly_stats_active_days():
         tz=_UTC,
     )
     assert stats["active_days"] == 6
+
+
+def test_small_vessel_by_ship_type():
+    from ais_notify.enrich.shiptype import is_small_vessel
+
+    assert is_small_vessel(30) and is_small_vessel(36) and is_small_vessel(37)
+    assert not is_small_vessel(70) and not is_small_vessel(None)

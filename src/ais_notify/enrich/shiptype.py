@@ -65,6 +65,15 @@ _SHIP_TYPES: dict[int, tuple[str, str]] = {
 }
 
 
+# Fishing, Sailing, Pleasure craft: the small boats seen every day.
+SMALL_SHIP_TYPES = frozenset({30, 36, 37})
+
+
+def is_small_vessel(code: int | None) -> bool:
+    """True for small boats by AIS ship type; unknown type is not small."""
+    return code in SMALL_SHIP_TYPES
+
+
 def ship_type_label(code: int | None) -> str:
     """Return human-readable label for an AIS ship type code."""
     if code is None:

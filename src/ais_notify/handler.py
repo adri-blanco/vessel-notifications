@@ -20,6 +20,7 @@ from ais_notify.db.repository import Repository
 from ais_notify.dedup import DedupCache
 from ais_notify.direction import classify_direction
 from ais_notify.enrich.ais_static import AISStaticEnricher
+from ais_notify.enrich.shiptype import is_small_vessel
 from ais_notify.enrich.photo import PhotoEnricher, run_enrichment_chain
 from ais_notify.geofence import Geofence
 from ais_notify.models import Sighting, Vessel, VesselSignal
@@ -80,13 +81,18 @@ class SignalHandler:
         direction = classify_direction(signal.cog, signal.sog)
 
         # ── 6. Send Telegram (fast path, before DB writes) ───────────────
-        try:
-            message = format_sighting(vessel, signal, last_seen, is_first_ever, direction)
-            asyncio.create_task(
-                self._notifier.send_message(message, photo_url=vessel.photo_url)
-            )
-        except Exception as exc:
-            logger.error("Failed to format/send Telegram for MMSI %d: %s", signal.mmsi, exc)
+        # Small boats are only announced the first time we ever see them.
+        notify = is_first_ever or not is_small_vessel(vessel.ship_type)
+        if not notify:
+            logger.debug("Telegram skipped — small vessel MMSI %d", signal.mmsi)
+        if notify:
+            try:
+                message = format_sighting(vessel, signal, last_seen, is_first_ever, direction)
+                asyncio.create_task(
+                    self._notifier.send_message(message, photo_url=vessel.photo_url)
+                )
+            except Exception as exc:
+                logger.error("Failed to format/send Telegram for MMSI %d: %s", signal.mmsi, exc)
 
         # ── 7. Mark dedup cache immediately ──────────────────────────────
         self._dedup.mark_seen(signal.mmsi, signal.ts)
@@ -102,6 +108,7 @@ class SignalHandler:
             heading=signal.heading,
             nav_status=signal.nav_status,
             direction=direction,
+            notified=notify,
             source=signal.source,
             raw=signal.raw,
         )

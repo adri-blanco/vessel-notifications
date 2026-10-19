@@ -77,5 +77,6 @@ class Sighting:
     heading: int | None = None
     nav_status: int | None = None
     direction: str | None = None  # "Arriving" | "Departing" | None
+    notified: bool = True  # False when the Telegram notification was skipped
     source: str = "unknown"
     raw: str | None = None

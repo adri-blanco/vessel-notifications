@@ -25,6 +25,7 @@ def build_all_stats(summary: dict, first_date: datetime | None) -> dict:
     ]
     return {
         "total_sightings": int(summary.get("total_sightings") or 0),
+        "notified_sightings": int(summary.get("notified_sightings") or 0),
         "unique_vessels": int(summary.get("unique_vessels") or 0),
         "first_date": first_date,
         "type_breakdown": type_breakdown,
@@ -76,6 +77,7 @@ def build_daily_stats(
     return {
         "date": date_label,
         "total_sightings": int(summary.get("total_sightings") or 0),
+        "notified_sightings": int(summary.get("notified_sightings") or 0),
         "unique_vessels": int(summary.get("unique_vessels") or 0),
         "new_vessels": len(new_mmsis),
         "busiest_hour": busiest_hour_entry[0] if busiest_hour_entry else None,
@@ -116,6 +118,7 @@ def build_weekly_stats(
     return {
         "week": week_label,
         "total_sightings": int(summary.get("total_sightings") or 0),
+        "notified_sightings": int(summary.get("notified_sightings") or 0),
         "unique_vessels": int(summary.get("unique_vessels") or 0),
         "new_vessels": len(new_mmsis),
         "active_days": active_days,

@@ -135,6 +135,7 @@ def format_daily_stats(stats: dict) -> str:
         f"📊 <b>Daily report — {date_label}</b>",
         "",
         f"📡 Signals processed: <b>{stats.get('total_sightings', 0)}</b>",
+        f"🔔 Visits: <b>{stats.get('total_sightings', 0)}</b> · Notified: <b>{stats.get('notified_sightings', 0)}</b>",
         f"🚢 Unique vessels: <b>{stats.get('unique_vessels', 0)}</b>",
         f"🆕 New vessels (first time): <b>{stats.get('new_vessels', 0)}</b>",
     ]
@@ -167,6 +168,7 @@ def format_all_stats(stats: dict) -> str:
         "🗂️ <b>All-time statistics</b>",
         "",
         f"📡 Total sightings: <b>{stats.get('total_sightings', 0)}</b>",
+        f"🔔 Visits: <b>{stats.get('total_sightings', 0)}</b> · Notified: <b>{stats.get('notified_sightings', 0)}</b>",
         f"🚢 Unique vessels: <b>{stats.get('unique_vessels', 0)}</b>",
     ]
     first_date = stats.get("first_date")
@@ -197,6 +199,7 @@ def format_weekly_stats(stats: dict) -> str:
         f"📅 <b>Weekly report — {week_label}</b>",
         "",
         f"📡 Total signals: <b>{stats.get('total_sightings', 0)}</b>",
+        f"🔔 Visits: <b>{stats.get('total_sightings', 0)}</b> · Notified: <b>{stats.get('notified_sightings', 0)}</b>",
         f"🚢 Unique vessels: <b>{stats.get('unique_vessels', 0)}</b>",
         f"🆕 New vessels: <b>{stats.get('new_vessels', 0)}</b>",
         f"📆 Active days: <b>{stats.get('active_days', 0)}/7</b>",

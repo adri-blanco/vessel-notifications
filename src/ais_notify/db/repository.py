@@ -128,6 +128,7 @@ class Repository:
             "mmsi": sighting.mmsi,
             "ts": sighting.ts.isoformat(),
             "source": sighting.source,
+            "notified": sighting.notified,
         }
         if sighting.lat is not None:
             row["lat"] = float(sighting.lat)
@@ -187,7 +188,7 @@ class Repository:
         PostgREST SQL function.  The function is defined in schema.sql.
 
         Returns a dict with keys:
-          total_sightings, unique_vessels,
+          total_sightings, notified_sightings, unique_vessels,
           hourly_counts (list of {hour, count}),
           type_breakdown (list of {ship_type_label, count}),
           top_vessels (list of {name, mmsi, count})

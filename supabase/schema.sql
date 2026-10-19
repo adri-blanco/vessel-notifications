@@ -57,13 +57,17 @@ CREATE TABLE IF NOT EXISTS sightings (
     nav_status  SMALLINT,
     direction   TEXT CHECK (direction IN ('Arriving', 'Departing')),
     source      TEXT NOT NULL DEFAULT 'unknown',
-    raw         TEXT
+    raw         TEXT,
+    notified    BOOLEAN NOT NULL DEFAULT TRUE  -- FALSE when the Telegram notification was skipped
 );
 
 -- Migration: add direction column to an existing sightings table
 -- Run this once if the table already exists:
 -- ALTER TABLE sightings
 --     ADD COLUMN IF NOT EXISTS direction TEXT CHECK (direction IN ('Arriving', 'Departing'));
+
+-- Migration: add notified column to an existing sightings table (old rows count as notified)
+-- ALTER TABLE sightings ADD COLUMN IF NOT EXISTS notified BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- Fast lookup of latest sighting per vessel (used by dedup + notifications)
 CREATE INDEX IF NOT EXISTS idx_sightings_mmsi_ts  ON sightings (mmsi, ts DESC);
@@ -76,9 +80,12 @@ CREATE INDEX IF NOT EXISTS idx_sightings_ts_mmsi  ON sightings (ts, mmsi);
 -- stats_summary: aggregated counts for a time window.
 -- Returns a single JSON object so only one round trip is needed.
 -- ---------------------------------------------------------------
+-- The return type changed (notified_sightings), which CREATE OR REPLACE cannot do.
+DROP FUNCTION IF EXISTS stats_summary(TIMESTAMPTZ, TIMESTAMPTZ);
 CREATE OR REPLACE FUNCTION stats_summary(p_since TIMESTAMPTZ, p_until TIMESTAMPTZ)
 RETURNS TABLE(
     total_sightings  BIGINT,
+    notified_sightings BIGINT,
     unique_vessels   BIGINT,
     hourly_counts    JSONB,
     type_breakdown   JSONB,
@@ -86,6 +93,7 @@ RETURNS TABLE(
 ) LANGUAGE sql STABLE AS $$
     SELECT
         COUNT(*)::BIGINT AS total_sightings,
+        COUNT(*) FILTER (WHERE s.notified)::BIGINT AS notified_sightings,
         COUNT(DISTINCT s.mmsi)::BIGINT AS unique_vessels,
 
         -- hourly counts as [{hour: H, count: N}, ...]
