@@ -25,16 +25,45 @@ Alternatively, a dedicated receiver like the **dAISy HAT** outputs NMEA over ser
 
 ## Quick start
 
-### 1. Install AIS-catcher (RTL-SDR decoder)
+### 1. Install an AIS decoder (RTL-SDR → NMEA)
+
+You need software that reads the RTL-SDR dongle and forwards decoded NMEA sentences over UDP to `127.0.0.1:10110`. Two good options — pick one:
+
+| | rtl-ais | AIS-catcher |
+|---|---|---|
+| Complexity | Simple, purpose-built | More options/filters |
+| Included service file | `deploy/rtl-ais.service` ✓ | Manual setup |
+| Recommended for | Most users | Advanced use |
+
+---
+
+#### Option A — rtl-ais (recommended, included service file)
 
 **On macOS (testing without hardware)** — skip this step entirely. Use the file replay source in step 5 instead.
 
-**On Raspberry Pi (production):**
+**On Raspberry Pi:**
 
 ```bash
-# Install curl if not already present
-sudo apt install curl
+# Install build dependencies
+sudo apt update
+sudo apt install -y librtlsdr-dev libusb-1.0-0-dev git build-essential
 
+# Build and install rtl-ais
+cd /tmp
+git clone https://github.com/dgiardini/rtl-ais.git
+cd rtl-ais
+make
+sudo make install
+
+# Verify the binary is in place
+which rtl_ais   # should print /usr/local/bin/rtl_ais
+```
+
+---
+
+#### Option B — AIS-catcher
+
+```bash
 # Install AIS-catcher (downloads binary + all SDR dependencies)
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install) -p"
 ```
@@ -57,11 +86,7 @@ Enable and start the service:
 sudo systemctl enable --now ais-catcher.service
 ```
 
-**On macOS (with a real RTL-SDR dongle attached):** AIS-catcher has no Homebrew formula and must be built from source — see the [macOS install guide](https://jvde-github.github.io/AIS-catcher-docs/installation/macos/). Once built, run it manually (no systemd on macOS):
-
-```bash
-AIS-catcher -u 127.0.0.1 10110
-```
+Set `AIS_SOURCE=udp` in your `.env` (already the default).
 
 ### 2. Set up Supabase
 
@@ -129,16 +154,34 @@ Copy both service files and enable them:
 sudo cp deploy/rtl-ais.service /etc/systemd/system/
 sudo cp deploy/ais-notify.service /etc/systemd/system/
 
-# Edit the paths in ais-notify.service if needed
+# Edit paths if your install directory is not /home/pi/vessel-notifications
 sudo nano /etc/systemd/system/ais-notify.service
 
 sudo systemctl daemon-reload
 sudo systemctl enable rtl-ais ais-notify
 sudo systemctl start rtl-ais ais-notify
+```
 
-# Monitor logs
+Monitor both services together:
+
+```bash
+# All logs (filter out the polling heartbeat noise)
+journalctl -u rtl-ais -u ais-notify -f | grep -v getUpdates
+
+# rtl-ais only (confirm dongle is working)
+journalctl -u rtl-ais -f
+
+# ais-notify only
 journalctl -u ais-notify -f
 ```
+
+> **Tip:** if `rtl-ais` fails with `usb_claim_interface error -6`, the DVB-T kernel
+> driver has grabbed the dongle. Make sure you completed the blacklist step in
+> section 1 above and reboot.
+
+> **Tip:** `ais-notify` uses `Wants=rtl-ais.service` (not `Requires=`), so it stays
+> running even if `rtl-ais` crashes or the dongle is temporarily disconnected.
+> It will resume receiving data automatically once `rtl-ais` comes back.
 
 ---
 
@@ -165,6 +208,7 @@ All settings live in `.env` (see `.env.example`):
 | `TIMEZONE` | `UTC` | IANA timezone for daily/weekly reports |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 | `AIS_PHOTO_ENRICHMENT` | `false` | Enable Wikidata photo lookup |
+| `GEOFENCE_POLYGON` | *(unset)* | Semicolon-separated `lat,lon` points — only notify vessels inside this area. Example: `43.40,-8.41;43.40,-8.35;43.36,-8.35;43.36,-8.41` |
 
 ---
 
