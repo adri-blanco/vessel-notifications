@@ -55,6 +55,8 @@ async def _main() -> None:
         format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    # httpx logs every request URL at INFO, which includes the Telegram bot token.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     logger = logging.getLogger(__name__)
 
     logger.info("Starting AIS Notify (source=%s)", config.ais_source)

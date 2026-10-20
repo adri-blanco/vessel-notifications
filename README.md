@@ -1,187 +1,136 @@
 # AIS Vessel Notifications
 
-A Python application for Raspberry Pi that:
-- Receives AIS signals from an RTL-SDR dongle via **rtl-ais** or **AIS-catcher**
-- Stores vessel sightings in **Supabase** (PostgreSQL)
-- Enriches vessel data from the AIS signal itself (name, type, size, flag)
-- Sends instant **Telegram** notifications on new sightings
-- Posts **daily and weekly stats** to Telegram
+Runs on a Raspberry Pi with an RTL-SDR dongle. It:
+- Receives AIS signals from boats near a port and decodes them with **AIS-catcher**
+- Sends a **Telegram** notification when a vessel enters the geofence
+- Stores every visit in **Supabase** (PostgreSQL) for statistics
+- Posts **daily and weekly stats** to Telegram, and answers `/today`, `/week` and `/all`
 
-The AIS input source is fully swappable (UDP → TCP → serial → file replay).
+Domain terms (Visit, Sighting, Small vessel…) are defined in [GLOSSARY.md](GLOSSARY.md).
 
 ---
 
-## Hardware requirements
+## How it behaves
+
+- Only signals with a position **inside the geofence** count. Signals without a position are ignored.
+- A vessel seen again within the dedup window (`DEDUP_WINDOW_SECONDS`) is skipped.
+- **First time ever seen:** always notified.
+- **Small vessels** (Fishing, Sailing, Pleasure craft) already seen before: stored in the database but **not** sent to Telegram.
+- Direction (Arriving = heading south, Departing = heading north) is derived from the course. It is hardcoded for this port.
+- Each report has a `Visits: X · Notified: Y` line.
+
+---
+
+## Hardware
 
 | Component | Notes |
 |-----------|-------|
-| Raspberry Pi (any model) | Pi 3/4/5 recommended |
-| RTL-SDR dongle | e.g. RTL-SDR Blog V3 |
-| VHF antenna (156–162 MHz) | AIS frequencies |
+| Raspberry Pi 3/4/5 | 64-bit OS with Docker installed |
+| RTL-SDR dongle | Tested with **RTL-SDR Blog V4** |
+| VHF antenna (~162 MHz) | AIS frequencies 161.975 / 162.025 MHz |
 
-Alternatively, a dedicated receiver like the **dAISy HAT** outputs NMEA over serial (set `AIS_SOURCE=serial`).
-
----
-
-## Quick start
-
-### 1. Install an AIS decoder (RTL-SDR → NMEA)
-
-You need software that reads the RTL-SDR dongle and forwards decoded NMEA sentences over UDP to `127.0.0.1:10110`. Two good options — pick one:
-
-| | rtl-ais | AIS-catcher |
-|---|---|---|
-| Complexity | Simple, purpose-built | More options/filters |
-| Included service file | `deploy/rtl-ais.service` ✓ | Manual setup |
-| Recommended for | Most users | Advanced use |
+> The Blog V4 needs the `rtl-sdr-blog` driver. Debian's stock `librtlsdr` and `rtl-ais`
+> do not work with it (`PLL not locked!`, no messages decoded). The Docker image builds the right driver.
 
 ---
 
-#### Option A — rtl-ais (recommended, included service file)
+## One-time setup
 
-**On macOS (testing without hardware)** — skip this step entirely. Use the file replay source in step 5 instead.
+### 1. Supabase
 
-**On Raspberry Pi:**
+1. Create a project at [supabase.com](https://supabase.com).
+2. Run `supabase/schema.sql` in the **SQL editor**.
+3. Copy the project URL and key.
 
-```bash
-# Install build dependencies
-sudo apt update
-sudo apt install -y librtlsdr-dev libusb-1.0-0-dev git build-essential
+**Upgrading an existing database:** run the commented `ALTER TABLE sightings ADD COLUMN IF NOT EXISTS notified …` line from `schema.sql`, then re-run the `stats_summary` function from the same file.
 
-# Build and install rtl-ais
-cd /tmp
-git clone https://github.com/dgiardini/rtl-ais.git
-cd rtl-ais
-make
-sudo make install
+### 2. Telegram bot
 
-# Verify the binary is in place
-which rtl_ais   # should print /usr/local/bin/rtl_ais
-```
+1. Chat with [@BotFather](https://t.me/BotFather) → `/newbot`, and copy the token.
+2. Add the bot to your chat or group.
+3. Get the chat ID: send the bot a message, open `https://api.telegram.org/bot<TOKEN>/getUpdates` and read `"chat": {"id": ...}`.
+   Groups are negative numbers; channels start with `-100`.
 
----
-
-#### Option B — AIS-catcher
+### 3. Configuration
 
 ```bash
-# Install AIS-catcher (downloads binary + all SDR dependencies)
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install) -p"
-```
-
-Configure it to forward NMEA to our app over UDP:
-
-```bash
-sudo nano /etc/AIS-catcher/config.cmd
-```
-
-Add this line and save:
-
-```
--u 127.0.0.1 10110
-```
-
-Enable and start the service:
-
-```bash
-sudo systemctl enable --now ais-catcher.service
-```
-
-Set `AIS_SOURCE=udp` in your `.env` (already the default).
-
-### 2. Set up Supabase
-
-1. Create a free project at [supabase.com](https://supabase.com).
-2. In the Supabase **SQL editor**, run the contents of `supabase/schema.sql`.
-3. Copy your project URL and anon/service key.
-
-### 3. Create a Telegram bot
-
-1. Chat with [@BotFather](https://t.me/BotFather) → `/newbot` and follow the prompts.
-2. Copy the bot token into `TELEGRAM_BOT_TOKEN`.
-3. Add the bot to your channel or group.
-4. Get the chat ID:
-   - Send any message to the chat (or `/start` in a private chat with the bot).
-   - Open this URL in your browser (replace the token):
-     ```
-     https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
-     ```
-   - Find `"chat": { "id": ... }` in the JSON response — that number is your `TELEGRAM_CHAT_ID`.
-
-> **ID format by chat type:**
-> - Private chat with the bot: positive number (`123456789`)
-> - Group: negative number (`-123456789`)
-> - Channel: negative number starting with `-100` (`-1001234567890`)
->
-> If `getUpdates` returns an empty result, send the bot a message first (in a group, type `@yourbotname hello`).
-
-### 4. Install the app
-
-```bash
-git clone https://github.com/yourusername/vessel-notifications.git
-cd vessel-notifications
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-
 cp .env.example .env
-# Edit .env with your Supabase URL/key, Telegram token/chat ID, etc.
+# fill in SUPABASE_URL, SUPABASE_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GEOFENCE_POLYGON
 ```
 
-### 5. Test without hardware (file replay)
+---
+
+## Deploy with Docker (recommended)
+
+`compose.yaml` runs two containers with host networking:
+- `ais-catcher`: reads the RTL-SDR over USB and forwards NMEA to `127.0.0.1:10110`
+- `ais-notify`: the app, listening on that UDP port
+
+On the Pi:
+
+```bash
+git clone https://github.com/adri-blanco/vessel-notifications.git ~/dev/vessel-notifications
+cd ~/dev/vessel-notifications
+cp .env.example .env   # and edit it
+docker compose up -d --build
+```
+
+The first build takes several minutes because it compiles the SDR driver and AIS-catcher.
+Both containers restart automatically after a reboot.
+
+### Day to day
+
+```bash
+docker compose ps                                  # status
+docker compose logs -f ais-notify | grep Vessel    # one line per vessel: notified or why not
+docker compose logs -f ais-catcher                 # decoder / dongle
+docker compose restart ais-notify                  # after editing .env
+docker compose up -d --build                       # after updating the code
+docker compose down                                # stop everything
+```
+
+Run these from the project folder.
+
+### Updating from your laptop
+
+```bash
+rsync -a --exclude .venv --exclude .git --exclude .env --exclude __pycache__ \
+  ./ garden-pi:dev/vessel-notifications/
+ssh garden-pi 'cd ~/dev/vessel-notifications && docker compose up -d --build'
+```
+
+### Troubleshooting
+
+| Symptom | Check |
+|---------|-------|
+| No `Vessel …` lines for hours | `docker compose logs ais-catcher`. Test the dongle with `docker compose stop ais-catcher`, then run `AIS-catcher -o 5` in a one-off container and look for `"class":"AIS"` lines. |
+| `PLL not locked!` and nothing decoded | The decoder is using a driver without Blog V4 support. Rebuild with `docker compose build --no-cache ais-catcher`. |
+| `usb_claim_interface` or `no such device` | Something else holds the dongle. Make sure no other `rtl_ais` or `AIS-catcher` process or systemd service is running (`pgrep -af 'rtl_ais|AIS-catcher'`). |
+| Sightings not saved, `column … does not exist` | Apply the Supabase migration above. |
+| Supabase host does not resolve | The free project may be paused; resume it in the dashboard. |
+
+---
+
+## Run without Docker (development)
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
+cp .env.example .env
+```
+
+No hardware? Replay a capture file:
 
 ```bash
 AIS_SOURCE=file AIS_FILE_PATH=tests/sample.nmea python -m ais_notify.main
 ```
 
-You should see decoded vessels in the logs. With valid Supabase/Telegram credentials set, sightings will be stored and a Telegram notification sent.
-
-### 6. Run in production
+Tests (fully offline):
 
 ```bash
-# Start manually
-source .venv/bin/activate
-ais-notify
+pip install pytest
+pytest tests/ -v
 ```
-
----
-
-## Systemd auto-start on the Pi
-
-Copy both service files and enable them:
-
-```bash
-sudo cp deploy/rtl-ais.service /etc/systemd/system/
-sudo cp deploy/ais-notify.service /etc/systemd/system/
-
-# Edit paths if your install directory is not /home/pi/vessel-notifications
-sudo nano /etc/systemd/system/ais-notify.service
-
-sudo systemctl daemon-reload
-sudo systemctl enable rtl-ais ais-notify
-sudo systemctl start rtl-ais ais-notify
-```
-
-Monitor both services together:
-
-```bash
-# All logs (filter out the polling heartbeat noise)
-journalctl -u rtl-ais -u ais-notify -f | grep -v getUpdates
-
-# rtl-ais only (confirm dongle is working)
-journalctl -u rtl-ais -f
-
-# ais-notify only
-journalctl -u ais-notify -f
-```
-
-> **Tip:** if `rtl-ais` fails with `usb_claim_interface error -6`, the DVB-T kernel
-> driver has grabbed the dongle. Make sure you completed the blacklist step in
-> section 1 above and reboot.
-
-> **Tip:** `ais-notify` uses `Wants=rtl-ais.service` (not `Requires=`), so it stays
-> running even if `rtl-ais` crashes or the dongle is temporarily disconnected.
-> It will resume receiving data automatically once `rtl-ais` comes back.
 
 ---
 
@@ -191,104 +140,39 @@ All settings live in `.env` (see `.env.example`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SUPABASE_URL` | — | Your Supabase project URL |
-| `SUPABASE_KEY` | — | Your Supabase anon or service key |
+| `SUPABASE_URL` | — | Supabase project URL |
+| `SUPABASE_KEY` | — | Supabase anon or service key |
 | `TELEGRAM_BOT_TOKEN` | — | Telegram bot token |
 | `TELEGRAM_CHAT_ID` | — | Chat or channel ID |
-| `AIS_SOURCE` | `udp` | Input source: `udp` / `tcp` / `serial` / `file` |
-| `AIS_UDP_HOST` | `127.0.0.1` | rtl-ais UDP host |
-| `AIS_UDP_PORT` | `10110` | rtl-ais UDP port |
-| `AIS_TCP_HOST` | `127.0.0.1` | TCP server host |
-| `AIS_TCP_PORT` | `10110` | TCP server port |
-| `AIS_SERIAL_PORT` | `/dev/ttyAMA0` | Serial port (dAISy HAT) |
-| `AIS_SERIAL_BAUD` | `38400` | Serial baud rate |
-| `AIS_FILE_PATH` | `tests/sample.nmea` | NMEA file for replay |
-| `AIS_FILE_LOOP` | `false` | Loop file replay |
-| `DEDUP_WINDOW_SECONDS` | `300` | Minimum seconds between duplicate alerts |
+| `AIS_SOURCE` | `udp` | `udp` / `tcp` / `serial` / `file` |
+| `AIS_UDP_HOST` / `AIS_UDP_PORT` | `127.0.0.1` / `10110` | UDP listener |
+| `AIS_TCP_HOST` / `AIS_TCP_PORT` | `127.0.0.1` / `10110` | TCP server to connect to |
+| `AIS_SERIAL_PORT` / `AIS_SERIAL_BAUD` | `/dev/ttyAMA0` / `38400` | Serial receiver (e.g. dAISy HAT) |
+| `AIS_FILE_PATH` / `AIS_FILE_LOOP` | `tests/sample.nmea` / `false` | File replay |
+| `DEDUP_WINDOW_SECONDS` | `300` | Minimum seconds between two Sightings of the same vessel |
 | `TIMEZONE` | `UTC` | IANA timezone for daily/weekly reports |
-| `LOG_LEVEL` | `INFO` | Logging verbosity |
-| `AIS_PHOTO_ENRICHMENT` | `false` | Enable Wikidata photo lookup |
-| `GEOFENCE_POLYGON` | *(unset)* | Semicolon-separated `lat,lon` points — only notify vessels inside this area. Example: `43.40,-8.41;43.40,-8.35;43.36,-8.35;43.36,-8.41` |
+| `LOG_LEVEL` | `INFO` | `DEBUG` is very noisy |
+| `AIS_PHOTO_ENRICHMENT` | `false` | Look up vessel photos for notifications |
+| `AIS_PHOTO_RECHECK_DAYS` | `30` | Days before retrying a failed photo lookup |
+| `GEOFENCE_POLYGON` | *(unset)* | `lat,lon;lat,lon;…` — only vessels inside count. Unset means everything counts. |
 
----
-
-## Swapping the input source
-
-The `AISSource` abstraction makes it trivial to change the data input:
-
-```
-AIS_SOURCE=udp     # RTL-SDR via rtl-ais or AIS-catcher (default)
-AIS_SOURCE=tcp     # Any TCP NMEA server (SignalK, AIS-catcher --server mode)
-AIS_SOURCE=serial  # dAISy HAT or other serial AIS receiver
-AIS_SOURCE=file    # Replay a .nmea capture file (testing)
-```
-
-To add a completely new source (e.g. MQTT, WebSocket):
-1. Create `src/ais_notify/sources/my_source.py` implementing `AISSource`.
-2. Add a case for it in `main._build_source()`.
-3. No other files need to change.
+Docker note: `docker compose` reads `.env` without a shell, so the semicolons in `GEOFENCE_POLYGON` need no quoting.
 
 ---
 
 ## Architecture
 
 ```
-RTL-SDR + rtl-ais
-      │ (NMEA UDP)
-      ▼
- AISSource adapter  ◄─── swappable (UDP/TCP/serial/file)
-      │
-      ▼
- AISDecoder (pyais)  ─── multi-part assembly, type 1/2/3/5/18/24
-      │
-      ▼
- SignalHandler
-   ├─ DedupCache (5-min TTL + DB fallback)
-   ├─ Enrichment chain (AIS static → ship type → MMSI country → photo)
-   ├─ Telegram notification  ◄── sent FIRST for low latency
-   └─ Supabase persist (sightings + vessels)
+RTL-SDR → AIS-catcher ──(NMEA over UDP)──► AISSource (udp/tcp/serial/file)
+                                                │
+                                           AISDecoder (pyais)
+                                                │
+                                          SignalHandler
+                                  geofence → dedup → enrich → notify → persist
+                                                │
+                                   Telegram  +  Supabase
 
- APScheduler
-   ├─ Daily 23:59 → stats query → Telegram
-   └─ Weekly Sun 23:59 → stats query → Telegram
+APScheduler: daily 23:59 and weekly Sunday 23:59 reports → Telegram
 ```
 
----
-
-## Running tests
-
-```bash
-pip install pytest
-pytest tests/ -v
-```
-
-The test suite runs fully offline using `FileSource` with `tests/sample.nmea`.
-Tests for the DB layer and Telegram require mocking (see individual test files).
-
----
-
-## Adding vessel photo enrichment
-
-Photos are disabled by default. To enable Wikidata lookups (free, covers notable ships):
-
-```
-AIS_PHOTO_ENRICHMENT=true
-```
-
-For a richer paid source (all vessels), add your key and implement `_lookup_photo_*` in `src/ais_notify/enrich/photo.py`:
-
-```
-AIS_VESSEL_API_KEY=your_key_here   # VesselAPI, Datalastic, etc.
-```
-
----
-
-## Extending the system
-
-| Feature | Where to add |
-|---------|-------------|
-| New notification channel (email, Slack…) | Implement `Notifier` protocol in `src/ais_notify/notify/` |
-| Geofencing / watchlist alerts | Add a pre-notification filter in `handler.py` |
-| Paid vessel enrichment API | Add a provider in `src/ais_notify/enrich/` |
-| Local SQLite offline buffer | Wrap `repository.py` with a write-ahead buffer |
-| Live web dashboard | Query Supabase via a Next.js / Grafana frontend |
+To add an input source, implement `AISSource` in `src/ais_notify/sources/` and register it in `main._build_source()`.

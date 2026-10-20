@@ -20,7 +20,7 @@ from ais_notify.db.repository import Repository
 from ais_notify.dedup import DedupCache
 from ais_notify.direction import classify_direction
 from ais_notify.enrich.ais_static import AISStaticEnricher
-from ais_notify.enrich.shiptype import is_small_vessel
+from ais_notify.enrich.shiptype import is_small_vessel, ship_type_label
 from ais_notify.enrich.photo import PhotoEnricher, run_enrichment_chain
 from ais_notify.geofence import Geofence
 from ais_notify.models import Sighting, Vessel, VesselSignal
@@ -83,8 +83,14 @@ class SignalHandler:
         # ── 6. Send Telegram (fast path, before DB writes) ───────────────
         # Small boats are only announced the first time we ever see them.
         notify = is_first_ever or not is_small_vessel(vessel.ship_type)
-        if not notify:
-            logger.debug("Telegram skipped — small vessel MMSI %d", signal.mmsi)
+        logger.info(
+            "Vessel %s (MMSI %d): %s",
+            vessel.name or "unknown",
+            signal.mmsi,
+            "notified"
+            if notify
+            else f"not notified — small vessel ({ship_type_label(vessel.ship_type)}), already seen before",
+        )
         if notify:
             try:
                 message = format_sighting(vessel, signal, last_seen, is_first_ever, direction)

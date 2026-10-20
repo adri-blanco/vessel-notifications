@@ -1,0 +1,21 @@
+FROM debian:bookworm-slim AS build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential cmake git ca-certificates pkg-config libusb-1.0-0-dev \
+        zlib1g-dev libcurl4-openssl-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+# The RTL-SDR Blog V4 needs the rtl-sdr-blog driver fork; Debian's librtlsdr does not support it.
+RUN git clone --depth 1 https://github.com/rtlsdrblog/rtl-sdr-blog.git /rtl \
+    && cmake -S /rtl -B /rtl/build -DINSTALL_UDEV_RULES=OFF -DDETACH_KERNEL_DRIVER=ON \
+    && make -C /rtl/build -j2 install && ldconfig
+RUN git clone --depth 1 https://github.com/jvde-github/AIS-catcher.git /src \
+    && cmake -S /src -B /src/build && make -C /src/build -j2
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libusb-1.0-0 zlib1g libcurl4 libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /usr/local/lib/librtlsdr.so* /usr/local/lib/
+COPY --from=build /src/build/AIS-catcher /usr/local/bin/AIS-catcher
+RUN ldconfig
+# Forward decoded NMEA over UDP to the app; -o 0 keeps the console quiet.
+CMD ["AIS-catcher", "-o", "0", "-u", "127.0.0.1", "10110"]

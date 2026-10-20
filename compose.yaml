@@ -1,0 +1,28 @@
+# Host networking keeps the app's default AIS_UDP_HOST=127.0.0.1:10110 working.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  ais-catcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.ais-catcher
+    network_mode: host
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - "c 189:* rmw"  # USB devices; survives re-enumeration of the dongle
+
+  ais-notify:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    logging: *logging
+    env_file: .env
+    depends_on:
+      - ais-catcher

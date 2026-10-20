@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIS to Telegram flow</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16202a;--mute:#5d6b78;--line:#9aa7b4;--pipe:#0b6bcb;--drop:#c2410c;--ok:#15803d;--bg-drop:#fff1e8;--bg-ok:#e8f6ed;--bg-pipe:#e6f0fb}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1419;--card:#18202a;--ink:#e6edf3;--mute:#93a1af;--line:#4a5967;--pipe:#58a6ff;--drop:#fb923c;--ok:#4ade80;--bg-drop:#2a1a10;--bg-ok:#10261a;--bg-pipe:#12263d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--mute);margin:0 0 20px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-bottom:20px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* one row = exit | state | note */
+.row{display:grid;grid-template-columns:170px 210px 1fr;align-items:center}
+.state{background:var(--card);border:2px solid var(--pipe);border-radius:10px;padding:10px 12px;text-align:center;font-weight:600;position:relative}
+.state.q{border-color:var(--drop);border-radius:24px}
+.state.ok{border-color:var(--ok);background:var(--bg-ok)}
+.state.dot{border-radius:99px;background:var(--pipe);color:#fff;border-color:var(--pipe)}
+.state.end{border-style:double;border-width:4px}
+
+/* exit branch to the left */
+.exit{display:flex;align-items:center;justify-content:flex-end;padding-right:0}
+.exit .box{border:2px dashed var(--drop);background:var(--bg-drop);color:var(--drop);border-radius:10px;padding:6px 10px;font-size:13px;font-weight:600;text-align:center}
+.exit .box.soft{border-color:var(--line);background:var(--card);color:var(--mute)}
+.exit .wire{flex:0 0 38px;height:2px;background:var(--line);position:relative;margin-right:0}
+.exit .wire::before{content:"";position:absolute;left:-1px;top:-4px;border:5px solid transparent;border-right:7px solid var(--line);border-left:0}
+.exit .lbl{position:absolute}
+
+/* annotation to the right */
+.note{position:relative;margin-left:44px;padding:8px 12px;font-size:14px;color:var(--mute);border-left:3px solid var(--line);background:transparent}
+.note::before{content:"";position:absolute;left:-44px;top:50%;width:41px;border-top:2px dashed var(--line)}
+.note b{color:var(--ink)}
+
+/* vertical arrow between states */
+.link{display:grid;grid-template-columns:170px 210px 1fr;height:30px}
+.link div{grid-column:2;position:relative}
+.link div::before{content:"";position:absolute;left:50%;top:0;bottom:6px;width:2px;background:var(--line);transform:translateX(-1px)}
+.link div::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);border:6px solid transparent;border-top:8px solid var(--line);border-bottom:0}
+.link span{position:absolute;left:calc(50% + 12px);top:5px;font-size:12px;font-weight:600;color:var(--ok)}
+
+@media(max-width:720px){
+  .row,.link{grid-template-columns:1fr 1fr}
+  .row{row-gap:6px;margin-bottom:2px}
+  .exit{grid-column:1;grid-row:1;justify-content:flex-start}
+  .state{grid-column:2;grid-row:1}
+  .note{grid-column:1/-1;grid-row:2;margin:0 0 6px 8px}
+  .note::before{display:none}
+  .link div{grid-column:2}
+  .exit .wire{flex-basis:20px}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>From AIS message to Telegram</h1>
+<p class="sub">Every ship signal is a small state machine. It moves down, or leaves sideways.</p>
+<div class="legend">
+  <span><i style="background:var(--pipe)"></i>step</span>
+  <span><i style="background:var(--bg-drop);border:2px dashed var(--drop)"></i>signal is dropped</span>
+  <span><i style="background:var(--bg-ok);border:2px solid var(--ok)"></i>outcome</span>
+</div>
+
+<div class="row">
+  <div></div>
+  <div class="state dot">Signal received</div>
+  <div class="note">An AIS receiver hands over a raw radio message: network, serial cable, or a replayed file.</div>
+</div>
+<div class="link"><div></div></div>
+
+<div class="row">
+  <div></div>
+  <div class="state">Decoded</div>
+  <div class="note">The raw text becomes a readable record: the ship's ID (MMSI), position, speed and course.</div>
+</div>
+<div class="link"><div></div></div>
+
+<div class="row">
+  <div class="exit"><div class="box">Dropped</div><div class="wire"></div></div>
+  <div class="state q">In our area?</div>
+  <div class="note"><b>No position, or outside the zone, leaves here.</b> Only ships near you matter, and this check is free, so it goes first.</div>
+</div>
+<div class="link"><div><span>yes</span></div></div>
+
+<div class="row">
+  <div class="exit"><div class="box">Dropped</div><div class="wire"></div></div>
+  <div class="state q">Not seen recently?</div>
+  <div class="note"><b>A repeat within the cool-down leaves here.</b> Ships transmit every few seconds, so this stops dozens of identical messages. It also returns when the ship was last seen.</div>
+</div>
+<div class="link"><div><span>yes</span></div></div>
+
+<div class="row">
+  <div></div>
+  <div class="state">Profile loaded</div>
+  <div class="note">The ship is looked up in the database. If it's missing, this is a <b>first-ever sighting</b> and an empty profile is started.</div>
+</div>
+<div class="link"><div></div></div>
+
+<div class="row">
+  <div></div>
+  <div class="state">Enriched</div>
+  <div class="note">The profile gets its name, ship type and a photo, when they can be found.</div>
+</div>
+<div class="link"><div></div></div>
+
+<div class="row">
+  <div></div>
+  <div class="state">Direction known</div>
+  <div class="note">From course and speed: is the ship arriving or departing?</div>
+</div>
+<div class="link"><div></div></div>
+
+<div class="row">
+  <div class="exit"><div class="box soft">No message</div><div class="wire"></div></div>
+  <div class="state q">Worth announcing?</div>
+  <div class="note"><b>A small boat we already know skips the message</b> and goes straight to saving. Everything else is announced: first-ever sightings and larger vessels.</div>
+</div>
+<div class="link"><div><span>yes</span></div></div>
+
+<div class="row">
+  <div></div>
+  <div class="state ok">Telegram message sent</div>
+  <div class="note">Name, type, direction, last-seen time and photo. It's sent in the background, <b>before</b> the database writes, so a slow database never delays it.</div>
+</div>
+<div class="link"><div></div></div>
+
+<div class="row">
+  <div></div>
+  <div class="state ok end">Remembered and saved</div>
+  <div class="note">The ship is marked "just seen" so repeats are dropped. The sighting and profile are saved in the background, new ships' profiles first. Then the next signal is taken.</div>
+</div>
+</main>
+</body>
+</html>
